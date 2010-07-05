@@ -80,6 +80,26 @@ class Zippy
     old_name
   end
 
+  def extract_all
+    entries = []
+    zipfile.each do |entry|
+      name = entry.name
+      dir = File.dirname(name)
+      unless dir.empty?
+        FileUtils.mkdir_p(dir)
+      end
+      zipfile.extract(name, name)
+      entries << name
+    end
+    entries
+  end
+  
+  def extract(*entries)
+    entries.each do |name|
+      zipfile.extract(name, name)
+    end
+    entries
+  end
 
   #Close the archive for writing
   def close
@@ -171,6 +191,20 @@ class Zippy
     content
   end
 
+  def self.extract(filename, *entries)
+    open(filename) do |z|
+      z.extract(*entries)
+    end
+    entries
+  end
+
+  def self.extract_all(filename)
+    entries = []
+    open(filename) do |z|
+      entries = z.extract_all
+    end
+    entries
+  end
 
   def self.[](filename, entry=nil)
     entry ? read(filename, entry) : list(filename)
