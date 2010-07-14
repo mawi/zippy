@@ -9,7 +9,7 @@ Gem::Specification.new do |s|
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Tore Darell"]
-  s.date = %q{2010-07-06}
+  s.date = %q{2010-07-13}
   s.description = %q{Zippy reads and writes zip files}
   s.email = %q{toredarell@gmail.com}
   s.extra_rdoc_files = [
@@ -18,6 +18,7 @@ Gem::Specification.new do |s|
   s.files = [
     ".gitignore",
      "README",
+     "Rakefile",
      "VERSION",
      "lib/zippy.rb",
      "rails/README",
