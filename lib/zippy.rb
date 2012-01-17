@@ -1,4 +1,7 @@
 require 'zip/zip'
+if defined? Rails and Rails::VERSION::MAJOR != 2
+  require 'zippy/railtie'
+end
 
 class Zippy
 
