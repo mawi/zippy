@@ -201,23 +201,25 @@ describe "Archive" do
     @zip.should_not include('foo')
     @zip.should include('oof')
   end
-
+  
 end
 
 
 describe "Existing archive" do
 
   before :each do
-    name = File.join(File.dirname(__FILE__), 'example.zip')
+    name = File.expand_path File.join(File.dirname(__FILE__), 'example.zip')
     FileUtils.cp(name, name+'.b')
     @zip = Zippy.open(name)
+    FileUtils.mkdir 'tmp' unless File.exist? 'tmp'
   end
 
   after :each do
     @zip.close
     File.unlink(@zip.filename) rescue nil
-    name = File.join(File.dirname(__FILE__), 'example.zip')
+    name = File.expand_path File.join(File.dirname(__FILE__), 'example.zip')
     FileUtils.mv(name+'.b', name)
+    FileUtils.rm_rf 'tmp'
   end
 
 
@@ -234,14 +236,62 @@ describe "Existing archive" do
     @zip['donkey'].should == 'horse'
     @zip.should_not include('bounce.jpg')
   end
+  
+  it "should extract single file" do
+    Dir.chdir('tmp') do
+      @zip.extract('text.txt').size.should == 1
+      File.exist?('text.txt').should be_true
+      File.size('text.txt').should > 0
+    end
+  end
+  
+  it "should extract multiple files" do
+    Dir.chdir('tmp') do
+      @zip.extract('test.txt', 'text.txt').size.should == 2
+      File.exist?('test.txt').should be_true
+      File.size('test.txt').should > 0
+      File.exist?('text.txt').should be_true
+      File.size('text.txt').should > 0
+    end
+  end
+  
+  it "should extract all files" do
+    Dir.chdir('tmp') do
+      # example.zip contains 4 files and a directory
+      @zip.extract_all.size.should == 4
+      Dir['**/*'].size.should == 5
+      ['test.txt', 'text.txt', 'bounce.jpg', 'huwawa/botticelli_birth_venus.jpg'].each do |name|
+        File.exist?(name).should be_true
+        File.size(name).should > 0
+      end
+    end
+  end
 
+  it "should be able to add existing files by pattern" do
+    Dir.chdir('tmp') do
+      @zip.extract_all
+      zip = Zippy.create('test2.zip')
+      zip.add_by_pattern('**/*.jpg')
+      zip.size.should == 2
+      zip['bounce.jpg'].should_not be_nil
+      zip['huwawa/botticelli_birth_venus.jpg'].should_not be_nil
+      FileUtils.rm_f('test2.zip')
+    end
+  end
+
+  
 end
 
 
 describe "Zippy." do
 
   before :each do
-    @filename = File.join(File.dirname(__FILE__), 'example.zip')
+    @filename = File.expand_path File.join(File.dirname(__FILE__), 'example.zip')
+    FileUtils.mkdir 'tmp' unless File.exist? 'tmp'
+  end
+  
+  after :each do
+    FileUtils.rm_rf 'tmp'
   end
 
   it "create should yield self, write to the provided filename and close" do
@@ -277,6 +327,50 @@ describe "Zippy." do
 
   it "read should return the contents of a specific entry in the archive" do
     Zippy.read(@filename, 'text.txt').should =~ /HUMBABA/
+  end
+
+  it "should extract single file" do
+    Dir.chdir('tmp') do
+      Zippy.extract(@filename, 'text.txt').size.should == 1
+      File.exist?('text.txt').should be_true
+      File.size('text.txt').should > 0
+    end
+  end
+  
+  it "should extract multiple files" do
+    Dir.chdir('tmp') do
+      Zippy.extract(@filename, 'test.txt', 'text.txt').size.should == 2
+      File.exist?('test.txt').should be_true
+      File.size('test.txt').should > 0
+      File.exist?('text.txt').should be_true
+      File.size('text.txt').should > 0
+    end
+  end
+  
+  it "should extract all files" do
+    Dir.chdir('tmp') do
+      # example.zip contains 4 files and a directory
+      Zippy.extract_all(@filename).size.should == 4
+      Dir['**/*'].size.should == 5
+      ['test.txt', 'text.txt', 'bounce.jpg', 'huwawa/botticelli_birth_venus.jpg'].each do |name|
+        File.exist?(name).should be_true
+        File.size(name).should > 0
+      end
+    end
+  end
+
+  it "should be able to add existing files by pattern" do
+    Dir.chdir('tmp') do
+      Zippy.extract_all(@filename)
+      Zippy.create('test2.zip') {|z| z['foo'] = 'bar'}
+      Zippy.add_by_pattern('test2.zip', '**/*.jpg')
+      Zippy.open('test2.zip') do |zip|
+        zip.size.should == 3
+        zip['bounce.jpg'].should_not be_nil
+        zip['huwawa/botticelli_birth_venus.jpg'].should_not be_nil
+      end
+      FileUtils.rm_f('test2.zip')
+    end
   end
 
 end

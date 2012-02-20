@@ -81,6 +81,36 @@ class Zippy
     old_name
   end
 
+  def extract_all(&block)
+    entries = []
+    zipfile.each do |entry|
+      name = entry.name
+      dir = File.dirname(name)
+      unless dir.empty?
+        FileUtils.mkdir_p(dir)
+      end
+      zipfile.extract(name, name, &block)
+      entries << name
+    end
+    entries
+  end
+  
+  def extract(*entries, &block)
+    entries.each do |name|
+      zipfile.extract(name, name, &block)
+    end
+    entries
+  end
+
+  def add_by_pattern(pattern='**/*', &overwrite_on_exist)
+    Dir[pattern].each do |filespec|
+      if File.exist?(filespec) && File.file?(filespec)
+        if overwrite_on_exist.nil? || (self[filespec] && overwrite_on_exist.call(filespec))
+          File.open(filespec) {|f| self[filespec] = f}
+        end
+      end
+    end
+  end
 
   #Close the archive for writing
   def close
@@ -172,6 +202,36 @@ class Zippy
     content
   end
 
+  def self.extract(filename, *entries, &block)
+    open(filename) do |z|
+      z.extract(*entries)
+    end
+    entries
+  end
+
+  def self.extract_all(filename, &block)
+    entries = []
+    open(filename) do |z|
+      entries = z.extract_all
+    end
+    entries
+  end
+  
+  def self.add_by_pattern(filename, pattern='**/*', &overwrite_on_exist)
+    puts "self.add_by_pattern('#{filename}', '#{pattern}')"
+    open(filename) do |z|
+      puts "opened"
+      Dir[pattern].each do |filespec|
+        puts "filespec => '#{filespec}'"
+        if File.exist?(filespec) && File.file?(filespec)
+          if overwrite_on_exist.nil? || (z[filespec] && overwrite_on_exist.call(filespec))
+            puts "adding #{filespec}"
+            File.open(filespec) {|f| z[filespec] = f}
+          end
+        end
+      end
+    end
+  end
 
   def self.[](filename, entry=nil)
     entry ? read(filename, entry) : list(filename)
