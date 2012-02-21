@@ -84,20 +84,23 @@ class Zippy
     old_name
   end
 
-  def extract_all(&block)
+  def extract_all(destination = "", &block)
     entries = []
     zipfile.each do |entry|
       name = entry.name
-      dir = File.dirname(name)
-      unless dir.empty?
-        FileUtils.mkdir_p(dir)
-      end
-      zipfile.extract(name, name, &block)
+
+      dest = Rails.root.to_s + "/tmp/" + destination + "/"
+      FileUtils.mkdir_p(dest) unless dest.empty?
+
+      dir = File.dirname(dest+name)
+      FileUtils.mkdir_p(dir) unless dir.empty?
+
+      zipfile.extract(name, dest+name, &block)
       entries << name
     end
     entries
   end
-  
+
   def extract(*entries, &block)
     entries.each do |name|
       zipfile.extract(name, name, &block)
@@ -197,7 +200,7 @@ class Zippy
     list
   end
 
-  
+
   #Read the contents of a single entry in +filename+
   def self.read(filename, entry)
     content = nil
@@ -212,14 +215,14 @@ class Zippy
     entries
   end
 
-  def self.extract_all(filename, &block)
+  def self.extract_all(filename, dest, &block)
     entries = []
     open(filename) do |z|
-      entries = z.extract_all
+      entries = z.extract_all(dest)
     end
     entries
   end
-  
+
   def self.add_by_pattern(filename, pattern='**/*', &overwrite_on_exist)
     puts "self.add_by_pattern('#{filename}', '#{pattern}')"
     open(filename) do |z|
